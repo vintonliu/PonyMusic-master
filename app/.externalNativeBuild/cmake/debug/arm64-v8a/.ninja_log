@@ -1,0 +1,22 @@
+# ninja log v5
+34	222	0	CMakeFiles/apollo.dir/src/main/cpp/apollo/apollo_default.c.o	769078a40679af06
+14	348	0	CMakeFiles/apollo.dir/src/main/cpp/apollo/apollo.c.o	fa9a41fd00a4cc80
+47	367	0	CMakeFiles/apollo.dir/src/main/cpp/apollo/apolloinit32k.c.o	6dcb1314073b4626
+1	487	0	CMakeFiles/apollo.dir/src/main/cpp/apollo-jni.cpp.o	98b35574ded7f01a
+39	488	0	CMakeFiles/apollo.dir/src/main/cpp/apollo/GvMediaEngine.cpp.o	b5f119e7e031b270
+489	666	0	../../../../src/main/jniLibs/arm64-v8a/libapollo.so	e2f0191e715eb09e
+1	148	0	CMakeFiles/apollo.dir/src/main/cpp/apollo-jni.cpp.o	98b35574ded7f01a
+14	154	0	CMakeFiles/apollo.dir/src/main/cpp/apollo/GvMediaEngine.cpp.o	b5f119e7e031b270
+154	319	0	../../../../src/main/jniLibs/arm64-v8a/libapollo.so	e2f0191e715eb09e
+1	83	0	CMakeFiles/apollo.dir/src/main/cpp/apollo-jni.cpp.o	98b35574ded7f01a
+83	191	0	../../../../src/main/jniLibs/arm64-v8a/libapollo.so	e2f0191e715eb09e
+26	494	0	CMakeFiles/apollo.dir/src/main/cpp/apollo/GvMediaEngine.cpp.o	b5f119e7e031b270
+14	124	0	CMakeFiles/apollo.dir/src/main/cpp/apollo/GvMediaEngine.cpp.o	b5f119e7e031b270
+1	129	0	CMakeFiles/apollo.dir/src/main/cpp/apollo-jni.cpp.o	98b35574ded7f01a
+129	282	0	../../../../src/main/jniLibs/arm64-v8a/libapollo.so	e2f0191e715eb09e
+14	109	0	CMakeFiles/apollo.dir/src/main/cpp/apollo/apollo.c.o	fa9a41fd00a4cc80
+44	125	0	CMakeFiles/apollo.dir/src/main/cpp/apollo/apolloinit32k.c.o	6dcb1314073b4626
+1	147	0	CMakeFiles/apollo.dir/src/main/cpp/apollo/apollo_default.c.o	769078a40679af06
+39	162	0	CMakeFiles/apollo.dir/src/main/cpp/apollo/GvMediaEngine.cpp.o	b5f119e7e031b270
+19	181	0	CMakeFiles/apollo.dir/src/main/cpp/apollo-jni.cpp.o	98b35574ded7f01a
+182	342	0	../../../../src/main/jniLibs/arm64-v8a/libapollo.so	e2f0191e715eb09e
