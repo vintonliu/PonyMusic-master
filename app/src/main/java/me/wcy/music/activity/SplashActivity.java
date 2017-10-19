@@ -49,23 +49,6 @@ public class SplashActivity extends BaseActivity {
         int year = Calendar.getInstance().get(Calendar.YEAR);
         tvCopyright.setText(getString(R.string.copyright, year));
 
-        GvApolloAudioConfig audioConfig = new GvApolloAudioConfig(48000, 2);
-        GvApolloManager.getInstance().GvSetSetting(GvApolloEnum.SETTING_AUDIO_ID, audioConfig);
-        GvApolloManager.getInstance().GvInit();
-        GvApolloManager.getInstance().GvGetSetting(GvApolloEnum.SETTING_AUDIO_ID, audioConfig);
-        Log.i("SplashActivity", "sampleRate = " + audioConfig.mSampleRate + " channels = " + audioConfig.mChannels);
-
-        int maxLen = GvApolloManager.getInstance().GvGetMaxBlockLength();
-        short[][] datainput = new short[GvApolloEnum.kSrs2_0][maxLen];
-        short[][] dataoutput = new short[GvApolloEnum.kSrs2_0][maxLen];
-        for (int row = 0; row < GvApolloEnum.kSrs2_0; row++) {
-            for (int col = 0; col < GvApolloEnum.kMaxBlockLength; col++) {
-                datainput[row][col] = (short)((row + 1) * col);
-            }
-        }
-        GvApolloManager.getInstance().GvProcess(datainput, dataoutput, GvApolloEnum.kMaxBlockLength);
-        GvApolloManager.getInstance().GvClose();
-
         checkService();
     }
 

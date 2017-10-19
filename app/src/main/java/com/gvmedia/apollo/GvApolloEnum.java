@@ -27,4 +27,5 @@ public class GvApolloEnum {
     public final static int SETTING_CHANNEL_ID = 1;
     public final static int SETTING_STATE_ID = 2;
     public final static int SETTING_AUDIO_ID = 3;
+    public final static int SETTING_SOUND_EFFECT_ID = 4;
 }

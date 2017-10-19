@@ -56,20 +56,22 @@ public class SettingActivity extends BaseActivity {
             mSoundEffect = findPreference(getString(R.string.setting_key_sound_effect));
             mFilterSize = findPreference(getString(R.string.setting_key_filter_size));
             mFilterTime = findPreference(getString(R.string.setting_key_filter_time));
-            mSoundEffect.setOnPreferenceClickListener(this);
+//            mSoundEffect.setOnPreferenceClickListener(this);
+            mSoundEffect.setOnPreferenceChangeListener(this);
             mFilterSize.setOnPreferenceChangeListener(this);
             mFilterTime.setOnPreferenceChangeListener(this);
 
             mFilterSize.setSummary(getSummary(Preferences.getFilterSize(), R.array.filter_size_entries, R.array.filter_size_entry_values));
             mFilterTime.setSummary(getSummary(Preferences.getFilterTime(), R.array.filter_time_entries, R.array.filter_time_entry_values));
+            mSoundEffect.setSummary(getSummary(Preferences.getSoundEffect(), R.array.sound_effect_entries, R.array.sound_effect_entry_value));
         }
 
         @Override
         public boolean onPreferenceClick(Preference preference) {
-            if (preference == mSoundEffect) {
-                startEqualizer();
-                return true;
-            }
+//            if (preference == mSoundEffect) {
+//                startEqualizer();
+//                return true;
+//            }
             return false;
         }
 
@@ -106,6 +108,11 @@ public class SettingActivity extends BaseActivity {
                 mFilterTime.setSummary(getSummary(Preferences.getFilterTime(), R.array.filter_time_entries, R.array.filter_time_entry_values));
                 onFilterChanged();
                 return true;
+            } else if (preference == mSoundEffect) {
+                Preferences.saveSoundEffect((String) newValue);
+                mSoundEffect.setSummary(getSummary(Preferences.getSoundEffect(), R.array.sound_effect_entries, R.array.sound_effect_entry_value));
+                onSoundEffectChanged();
+                return true;
             }
             return false;
         }
@@ -120,6 +127,10 @@ public class SettingActivity extends BaseActivity {
                 }
             }
             return entryArray[0];
+        }
+
+        private void onSoundEffectChanged() {
+            mPlayService.updateSoundEffect();
         }
 
         private void onFilterChanged() {

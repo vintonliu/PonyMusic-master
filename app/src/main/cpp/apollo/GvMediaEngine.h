@@ -16,6 +16,7 @@ enum GvSettingId
     SETTING_CHANNEL_ID =1,
     SETTING_STATE_ID = 2,
     SETTING_AUDIO_ID = 3,
+    SETTING_SOUND_EFFECT_ID = 4
 };
 
 typedef struct tAudioConfig

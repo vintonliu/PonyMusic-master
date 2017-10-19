@@ -5,7 +5,7 @@ package me.wcy.music.utils;
  */
 public class ParseUtils {
 
-    public static long parseInt(String s) {
+    public static int parseInt(String s) {
         try {
             return Integer.parseInt(s);
         } catch (NumberFormatException e) {

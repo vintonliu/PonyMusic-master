@@ -14,6 +14,11 @@ import android.support.annotation.Nullable;
 import android.text.format.DateUtils;
 import android.util.Log;
 
+import com.gvmedia.apollo.GvApolloAudioConfig;
+import com.gvmedia.apollo.GvApolloEnum;
+import com.gvmedia.apollo.GvApolloManager;
+import com.gvmedia.apollo.GvApolloSoundEffectConfig;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Random;
@@ -25,6 +30,7 @@ import me.wcy.music.enums.PlayModeEnum;
 import me.wcy.music.model.Music;
 import me.wcy.music.receiver.NoisyAudioStreamReceiver;
 import me.wcy.music.utils.MusicUtils;
+import me.wcy.music.utils.ParseUtils;
 import me.wcy.music.utils.Preferences;
 
 /**
@@ -60,6 +66,23 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
         mAudioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
         mPlayer.setOnCompletionListener(this);
         Notifier.init(this);
+
+        GvApolloAudioConfig audioConfig = new GvApolloAudioConfig(48000, 2);
+        GvApolloManager.getInstance().GvSetSetting(GvApolloEnum.SETTING_AUDIO_ID, audioConfig);
+        GvApolloManager.getInstance().GvInit();
+        GvApolloManager.getInstance().GvGetSetting(GvApolloEnum.SETTING_AUDIO_ID, audioConfig);
+        Log.i("SplashActivity", "sampleRate = " + audioConfig.mSampleRate + " channels = " + audioConfig.mChannels);
+
+        int maxLen = GvApolloManager.getInstance().GvGetMaxBlockLength();
+        short[][] datainput = new short[GvApolloEnum.kSrs2_0][maxLen];
+        short[][] dataoutput = new short[GvApolloEnum.kSrs2_0][maxLen];
+        for (int row = 0; row < GvApolloEnum.kSrs2_0; row++) {
+            for (int col = 0; col < GvApolloEnum.kMaxBlockLength; col++) {
+                datainput[row][col] = (short)((row + 1) * col);
+            }
+        }
+        GvApolloManager.getInstance().GvProcess(datainput, dataoutput, GvApolloEnum.kMaxBlockLength);
+//        GvApolloManager.getInstance().GvClose();
     }
 
     @Nullable
@@ -119,6 +142,12 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
                 }
             }
         }.execute();
+    }
+
+    public void updateSoundEffect() {
+        int effectId = ParseUtils.parseInt(Preferences.getSoundEffect());
+        GvApolloManager.getInstance().GvSetSetting(GvApolloEnum.SETTING_SOUND_EFFECT_ID,
+                new GvApolloSoundEffectConfig(effectId));
     }
 
     @Override
@@ -411,6 +440,7 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
 
     @Override
     public void onDestroy() {
+        GvApolloManager.getInstance().GvClose();
         AppCache.setPlayService(null);
         super.onDestroy();
         Log.i(TAG, "onDestroy: " + getClass().getSimpleName());

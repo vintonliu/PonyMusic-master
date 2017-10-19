@@ -67,6 +67,14 @@ public class Preferences {
         saveBoolean(NIGHT_MODE, on);
     }
 
+    public static String getSoundEffect() {
+        return getString(sContext.getString(R.string.setting_key_sound_effect), "0");
+    }
+
+    public static void saveSoundEffect(String value) {
+        saveString(sContext.getString(R.string.setting_key_sound_effect), value);
+    }
+
     public static String getFilterSize() {
         return getString(sContext.getString(R.string.setting_key_filter_size), "0");
     }

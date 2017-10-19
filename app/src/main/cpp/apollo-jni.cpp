@@ -206,6 +206,18 @@ JNIEXPORT void JNICALL setSetting(JNIEnv *env,
             ptr->setSetting(settingId, (void*)&config);
         }
         break;
+
+        case SETTING_SOUND_EFFECT_ID:
+        {
+            jfieldID jfidEffectId = (env)->GetFieldID(jCls, "mSoundEffectId", "I");
+
+            LOGI("%s soundEffectId = %d", __FUNCTION__,
+                 (env)->GetIntField(cfgObj, jfidEffectId));
+        }
+        break;
+
+        default:
+            break;
     }
 }
 
@@ -241,13 +253,13 @@ JNIEXPORT void JNICALL getSetting(JNIEnv *env,
         {
 
         }
-            break;
+        break;
 
         case SETTING_STATE_ID:
         {
 
         }
-            break;
+        break;
 
         case SETTING_AUDIO_ID:
         {
@@ -262,7 +274,14 @@ JNIEXPORT void JNICALL getSetting(JNIEnv *env,
             (env)->SetIntField(cfgObj, jfidSampleRate, config.sampleRate);
             (env)->SetIntField(cfgObj, jfidChannels, config.channels);
         }
-            break;
+        break;
+
+        case SETTING_SOUND_EFFECT_ID:
+        {
+            jfieldID jfidEffectId = (env)->GetFieldID(jCls, "mSoundEffectId", "I");
+            (env)->SetIntField(cfgObj, jfidEffectId, 2);
+        }
+        break;
     }
 }
 
@@ -369,6 +388,9 @@ void printSettingName(const char* func, int settingId)
             return;
         case SETTING_AUDIO_ID:
             LOGI("%s SETTING_AUDIO_ID", func);
+            return;
+        case SETTING_SOUND_EFFECT_ID:
+            LOGI("%s SETTING_SOUND_EFFECT_ID", func);
             return;
         default:
             LOGI("%s UNKNOWN", func);

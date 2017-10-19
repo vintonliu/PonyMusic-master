@@ -16,8 +16,17 @@
 
     <PreferenceCategory android:title="@string/play">
 
-        <Preference
+        <!--<Preference
             android:key="@string/setting_key_sound_effect"
+            android:title="@string/sound_effect" />-->
+
+        <ListPreference
+            android:defaultValue="0"
+            android:dialogTitle="音效设置"
+            android:entries="@array/sound_effect_entries"
+            android:entryValues="@array/sound_effect_entry_value"
+            android:key="@string/setting_key_sound_effect"
+            android:summary="自定义音效调节"
             android:title="@string/sound_effect" />
     </PreferenceCategory>
 
