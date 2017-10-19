@@ -90,8 +90,11 @@ int GvMediaEngine::process(short dataInput[MAX_INPUT_CHANNELS_NUM][kMaxBlockLeng
                            int nSize)
 {
     LOGI("%s", __func__);
-    memcpy(&dataOutput[kSrsLeft], &dataInput[kSrsLeft], nSize);
-    memcpy(&dataOutput[kSrsRight], &dataInput[kSrsRight], nSize);
+    for (int i = 0; i < MAX_INPUT_CHANNELS_NUM; ++i) {
+        for (int j = 0; j < kMaxBlockLength; ++j) {
+            dataOutput[i][j] = dataInput[i][j];
+        }
+    }
 
     return 0;
 }

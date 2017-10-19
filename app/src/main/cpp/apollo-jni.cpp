@@ -66,6 +66,13 @@ JNIEXPORT jint JNICALL apolloProcess(JNIEnv *env,
                                      jobjectArray dataOutputArray,
                                      jint nSize);
 
+/*
+ * Class:     com_gvmedia_apollo_GvApolloManager
+ * Method:    getMaxBlockLen
+ * Signature: (J)I
+ */
+JNIEXPORT jint JNICALL getMaxBlockLen(JNIEnv *env, jobject thiz, jlong handle);
+
 static void printSettingName(const char* func, int settingId);
 
 static JNINativeMethod g_native_methods[] = {
@@ -74,7 +81,8 @@ static JNINativeMethod g_native_methods[] = {
         {"setSetting", "(JILjava/lang/Object;)V", (void*)setSetting},
         {"getSetting", "(JILjava/lang/Object;)V", (void*)getSetting},
         {"apolloInit", "(J)I", (void*)apolloInit},
-        {"apolloProcess", "(J[[S[[SI)I", (void*)apolloProcess}
+        {"apolloProcess", "(J[[S[[SI)I", (void*)apolloProcess},
+        {"getMaxBlockLen", "(J)I", (void*)getMaxBlockLen}
 };
 
 /*
@@ -337,6 +345,16 @@ JNIEXPORT jint JNICALL apolloProcess(JNIEnv *env,
         (env)->SetShortArrayRegion((jshortArray)outArray, 0, kMaxBlockLength, outputData[rowIndex]);
     }
     return 0;
+}
+
+/*
+ * Class:     com_gvmedia_apollo_GvApolloManager
+ * Method:    getMaxBlockLen
+ * Signature: (J)I
+ */
+JNIEXPORT jint JNICALL getMaxBlockLen(JNIEnv *env, jobject thiz, jlong handle)
+{
+    return kMaxBlockLength;
 }
 
 void printSettingName(const char* func, int settingId)

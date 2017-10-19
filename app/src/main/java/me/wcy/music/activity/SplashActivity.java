@@ -55,8 +55,14 @@ public class SplashActivity extends BaseActivity {
         GvApolloManager.getInstance().GvApolloGetSetting(GvApolloEnum.SETTING_AUDIO_ID, audioConfig);
         Log.i("SplashActivity", "sampleRate = " + audioConfig.mSampleRate + " channels = " + audioConfig.mChannels);
 
-        short[][] datainput = new short[GvApolloEnum.kSrs2_0][GvApolloEnum.kMaxBlockLength];
-        short[][] dataoutput = new short[GvApolloEnum.kSrs2_0][GvApolloEnum.kMaxBlockLength];
+        int maxLen = GvApolloManager.getInstance().GvApolloGetMaxBlockLength();
+        short[][] datainput = new short[GvApolloEnum.kSrs2_0][maxLen];
+        short[][] dataoutput = new short[GvApolloEnum.kSrs2_0][maxLen];
+        for (int row = 0; row < GvApolloEnum.kSrs2_0; row++) {
+            for (int col = 0; col < GvApolloEnum.kMaxBlockLength; col++) {
+                datainput[row][col] = (short)((row + 1) * col);
+            }
+        }
         GvApolloManager.getInstance().GvApolloProcess(datainput, dataoutput, GvApolloEnum.kMaxBlockLength);
         GvApolloManager.getInstance().GvApolloClose();
 

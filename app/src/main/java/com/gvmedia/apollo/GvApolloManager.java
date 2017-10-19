@@ -29,6 +29,8 @@ public final class GvApolloManager {
                                            short[][] dataOutput,
                                            int nSize);
 
+    private native final int getMaxBlockLen(long handle);
+
     /** GvMediaEngine instance handle **/
     long handle = 0;
 
@@ -88,5 +90,9 @@ public final class GvApolloManager {
                                short[][] dataOutput,
                                int nSize) {
         return apolloProcess(handle, dataInput, dataOutput, nSize);
+    }
+
+    public int GvApolloGetMaxBlockLength() {
+        return getMaxBlockLen(handle);
     }
 }
