@@ -49,7 +49,7 @@ public final class GvApolloManager {
     /**
      * free gvmedia instance memory
      */
-    public void GvApolloClose() {
+    public void GvClose() {
         deleteInstance(handle);
     }
 
@@ -58,7 +58,7 @@ public final class GvApolloManager {
      * @param settingId see @GvApolloEnum Apollo setting Id
      * @param cfgObj config object
      */
-    public void GvApolloSetSetting(int settingId, Object cfgObj) {
+    public void GvSetSetting(int settingId, Object cfgObj) {
         setSetting(handle, settingId, cfgObj);
     }
 
@@ -67,7 +67,7 @@ public final class GvApolloManager {
      * @param settingId see @GvApolloEnum Apollo setting Id
      * @param cfgObj config object
      */
-    public void GvApolloGetSetting(int settingId, Object cfgObj) {
+    public void GvGetSetting(int settingId, Object cfgObj) {
         getSetting(handle, settingId, cfgObj);
     }
 
@@ -75,7 +75,7 @@ public final class GvApolloManager {
      * init gvmedia
      * @return 0 for successed, else failure
      */
-    public int GvApolloInit() {
+    public int GvInit() {
         return apolloInit(handle);
     }
 
@@ -86,13 +86,13 @@ public final class GvApolloManager {
      * @param nSize input data size
      * @return 0 for successed, else failure
      */
-    public int GvApolloProcess(short[][] dataInput,
-                               short[][] dataOutput,
-                               int nSize) {
+    public int GvProcess(short[][] dataInput,
+                         short[][] dataOutput,
+                         int nSize) {
         return apolloProcess(handle, dataInput, dataOutput, nSize);
     }
 
-    public int GvApolloGetMaxBlockLength() {
+    public int GvGetMaxBlockLength() {
         return getMaxBlockLen(handle);
     }
 }

@@ -50,12 +50,12 @@ public class SplashActivity extends BaseActivity {
         tvCopyright.setText(getString(R.string.copyright, year));
 
         GvApolloAudioConfig audioConfig = new GvApolloAudioConfig(48000, 2);
-        GvApolloManager.getInstance().GvApolloSetSetting(GvApolloEnum.SETTING_AUDIO_ID, audioConfig);
-        GvApolloManager.getInstance().GvApolloInit();
-        GvApolloManager.getInstance().GvApolloGetSetting(GvApolloEnum.SETTING_AUDIO_ID, audioConfig);
+        GvApolloManager.getInstance().GvSetSetting(GvApolloEnum.SETTING_AUDIO_ID, audioConfig);
+        GvApolloManager.getInstance().GvInit();
+        GvApolloManager.getInstance().GvGetSetting(GvApolloEnum.SETTING_AUDIO_ID, audioConfig);
         Log.i("SplashActivity", "sampleRate = " + audioConfig.mSampleRate + " channels = " + audioConfig.mChannels);
 
-        int maxLen = GvApolloManager.getInstance().GvApolloGetMaxBlockLength();
+        int maxLen = GvApolloManager.getInstance().GvGetMaxBlockLength();
         short[][] datainput = new short[GvApolloEnum.kSrs2_0][maxLen];
         short[][] dataoutput = new short[GvApolloEnum.kSrs2_0][maxLen];
         for (int row = 0; row < GvApolloEnum.kSrs2_0; row++) {
@@ -63,8 +63,8 @@ public class SplashActivity extends BaseActivity {
                 datainput[row][col] = (short)((row + 1) * col);
             }
         }
-        GvApolloManager.getInstance().GvApolloProcess(datainput, dataoutput, GvApolloEnum.kMaxBlockLength);
-        GvApolloManager.getInstance().GvApolloClose();
+        GvApolloManager.getInstance().GvProcess(datainput, dataoutput, GvApolloEnum.kMaxBlockLength);
+        GvApolloManager.getInstance().GvClose();
 
         checkService();
     }
