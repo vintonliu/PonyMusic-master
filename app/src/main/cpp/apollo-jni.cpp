@@ -298,7 +298,45 @@ JNIEXPORT jint JNICALL apolloProcess(JNIEnv *env,
         return JNI_ERR;
     }
 
-    return ptr->process(NULL, NULL, 0);
+    short inputData[MAX_INPUT_CHANNELS_NUM][kMaxBlockLength] = { 0 };
+    short outputData[MAX_OUTPUT_CHANNELS_NUM][kMaxBlockLength] = { 0 };
+
+    int inputRow = (env)->GetArrayLength(dataInputArray);
+    inputRow = inputRow > MAX_INPUT_CHANNELS_NUM ? MAX_INPUT_CHANNELS_NUM : inputRow;
+    jarray inputArray = (jarray )(env)->GetObjectArrayElement(dataInputArray, 0);
+    int inputCol = (env)->GetArrayLength(inputArray);
+    inputCol = inputCol > kMaxBlockLength ? kMaxBlockLength : inputCol;
+    LOGI("%s inputRow = %d inputCol = %d", __FUNCTION__, inputRow, inputCol);
+
+    for (int rowIndex = 0; rowIndex < inputRow; rowIndex++)
+    {
+        inputArray = (jarray)(env)->GetObjectArrayElement(dataInputArray, rowIndex);
+        jshort* coldata = (env)->GetShortArrayElements((jshortArray)inputArray, 0);
+        for (int colIndex = 0; colIndex < inputCol; ++colIndex)
+        {
+            inputData[rowIndex][colIndex] = coldata[colIndex];
+        }
+        (env)->ReleaseShortArrayElements((jshortArray)inputArray, coldata, 0);
+    }
+
+    int res = ptr->process(inputData, outputData, nSize);
+    if (res != 0)
+    {
+        return res;
+    }
+
+    int outputRow = (env)->GetArrayLength(dataOutputArray);
+    outputRow = outputRow > MAX_OUTPUT_CHANNELS_NUM ? MAX_OUTPUT_CHANNELS_NUM : outputRow;
+    jarray outArray = (jarray)(env)->GetObjectArrayElement(dataOutputArray, 0);
+    int outCol = (env)->GetArrayLength(outArray);
+    outCol = outCol > kMaxBlockLength ? kMaxBlockLength : outCol;
+    LOGI("%s outputRow = %d outCol = %d", __FUNCTION__, outputRow, outCol);
+    for (int rowIndex = 0; rowIndex < outputRow; ++rowIndex)
+    {
+        outArray = (jarray)(env)->GetObjectArrayElement(dataOutputArray, rowIndex);
+        (env)->SetShortArrayRegion((jshortArray)outArray, 0, kMaxBlockLength, outputData[rowIndex]);
+    }
+    return 0;
 }
 
 void printSettingName(const char* func, int settingId)

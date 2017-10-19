@@ -8,6 +8,9 @@
 #include "apollo_api.h"
 #include "apollo.h"
 
+#define MAX_INPUT_CHANNELS_NUM      kSrs2_0 // kSrs6_1
+#define MAX_OUTPUT_CHANNELS_NUM     kSrs2_0
+
 enum GvSettingId
 {
     SETTING_CHANNEL_ID =1,
@@ -53,13 +56,17 @@ public:
      * @param nSize input data size
      * @return 0 for successed, else failure
      */
-    int process(short* dataInput, short* dataOutput, int nSize);
+    int process(short dataInput[MAX_INPUT_CHANNELS_NUM][kMaxBlockLength],
+                short dataOutput[MAX_OUTPUT_CHANNELS_NUM][kMaxBlockLength],
+                int nSize);
 
 private:
     GVApolloChannel* _channelCfg;
     GVApolloState* _stateCfg;
 
     GvAudioConfig _audioConfig;
+
+    Sample*	_tempSample;
 };
 
 

@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <android/log.h>
+#include <sample.h>
 #include "GvMediaEngine.h"
 
 #define LOGI(...)   __android_log_print((int)ANDROID_LOG_INFO, "Apollo-jni", __VA_ARGS__)
@@ -17,11 +18,19 @@ GvMediaEngine::GvMediaEngine()
     _stateCfg = new GVApolloState();
     _audioConfig.sampleRate = 48000;
     _audioConfig.channels = 2;
+
+    _tempSample = new Sample[kSrsApolloTempBuffers * kMaxBlockLength];
 }
 
 GvMediaEngine::~GvMediaEngine()
 {
     LOGI("%s ~dtor", __func__);
+    if (_tempSample)
+    {
+        delete _tempSample;
+        _tempSample = NULL;
+    }
+
     if (_channelCfg)
     {
         delete _channelCfg;
@@ -76,8 +85,13 @@ int GvMediaEngine::initEngine()
     return 0;
 }
 
-int GvMediaEngine::process(short *dataInput, short *dataOutput, int nSize)
+int GvMediaEngine::process(short dataInput[MAX_INPUT_CHANNELS_NUM][kMaxBlockLength],
+                           short dataOutput[MAX_OUTPUT_CHANNELS_NUM][kMaxBlockLength],
+                           int nSize)
 {
     LOGI("%s", __func__);
+    memcpy(&dataOutput[kSrsLeft], &dataInput[kSrsLeft], nSize);
+    memcpy(&dataOutput[kSrsRight], &dataInput[kSrsRight], nSize);
+
     return 0;
 }
