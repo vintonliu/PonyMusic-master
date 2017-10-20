@@ -129,8 +129,8 @@ public class AudioCodec {
   
         if (mediaDecode == null) {  
             Log.e(TAG, "create mediaDecode failed");  
-            return;  
-        }  
+            return;
+        }
         mediaDecode.start();//启动MediaCodec ，等待传入数据  
         decodeInputBuffers=mediaDecode.getInputBuffers();//MediaCodec在此ByteBuffer[]中获取输入数据  
         decodeOutputBuffers=mediaDecode.getOutputBuffers();//MediaCodec将解码后的数据放到此ByteBuffer[]中 我们可以直接在这里面得到PCM数据  

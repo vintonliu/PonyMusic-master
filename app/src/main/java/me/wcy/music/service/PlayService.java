@@ -27,6 +27,8 @@ import me.wcy.music.application.AppCache;
 import me.wcy.music.application.Notifier;
 import me.wcy.music.constants.Actions;
 import me.wcy.music.enums.PlayModeEnum;
+import me.wcy.music.gvMedia.AudioDecoder;
+import me.wcy.music.gvMedia.AudioPlayer;
 import me.wcy.music.model.Music;
 import me.wcy.music.receiver.NoisyAudioStreamReceiver;
 import me.wcy.music.utils.MusicUtils;
@@ -37,8 +39,11 @@ import me.wcy.music.utils.Preferences;
  * 音乐播放后台服务
  * Created by wcy on 2015/11/27.
  */
-public class PlayService extends Service implements MediaPlayer.OnCompletionListener, AudioManager.OnAudioFocusChangeListener {
-    private static final String TAG = "Service";
+public class PlayService extends Service implements MediaPlayer.OnCompletionListener,
+        AudioManager.OnAudioFocusChangeListener,
+        AudioPlayer.OnCompletionListener
+{
+    private static final String TAG = "PlayService";
     private static final long TIME_UPDATE = 100L;
     private static final int STATE_IDLE = 0;
     private static final int STATE_PREPARING = 1;
@@ -59,6 +64,9 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
     private long quitTimerRemain;
     private int mPlayState = STATE_IDLE;
 
+    private AudioPlayer mAudioPlayer = new AudioPlayer();
+    private static boolean isMP = true;
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -67,22 +75,23 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
         mPlayer.setOnCompletionListener(this);
         Notifier.init(this);
 
-        GvApolloAudioConfig audioConfig = new GvApolloAudioConfig(48000, 2);
-        GvApolloManager.getInstance().GvSetSetting(GvApolloEnum.SETTING_AUDIO_ID, audioConfig);
-        GvApolloManager.getInstance().GvInit();
-        GvApolloManager.getInstance().GvGetSetting(GvApolloEnum.SETTING_AUDIO_ID, audioConfig);
-        Log.i("SplashActivity", "sampleRate = " + audioConfig.mSampleRate + " channels = " + audioConfig.mChannels);
+        mAudioPlayer.setOnCompletionListener(this);
 
-        int maxLen = GvApolloManager.getInstance().GvGetMaxBlockLength();
-        short[][] datainput = new short[GvApolloEnum.kSrs2_0][maxLen];
-        short[][] dataoutput = new short[GvApolloEnum.kSrs2_0][maxLen];
-        for (int row = 0; row < GvApolloEnum.kSrs2_0; row++) {
-            for (int col = 0; col < GvApolloEnum.kMaxBlockLength; col++) {
-                datainput[row][col] = (short)((row + 1) * col);
-            }
-        }
-        GvApolloManager.getInstance().GvProcess(datainput, dataoutput, GvApolloEnum.kMaxBlockLength);
-//        GvApolloManager.getInstance().GvClose();
+//        GvApolloAudioConfig audioConfig = new GvApolloAudioConfig(48000, 2);
+//        GvApolloManager.getInstance().GvSetSetting(GvApolloEnum.SETTING_AUDIO_ID, audioConfig);
+//        GvApolloManager.getInstance().GvInit();
+//        GvApolloManager.getInstance().GvGetSetting(GvApolloEnum.SETTING_AUDIO_ID, audioConfig);
+//        Log.i("SplashActivity", "sampleRate = " + audioConfig.mSampleRate + " channels = " + audioConfig.mChannels);
+//
+//        int maxLen = GvApolloManager.getInstance().GvGetMaxBlockLength();
+//        short[][] datainput = new short[GvApolloEnum.kSrs2_0][maxLen];
+//        short[][] dataoutput = new short[GvApolloEnum.kSrs2_0][maxLen];
+//        for (int row = 0; row < GvApolloEnum.kSrs2_0; row++) {
+//            for (int col = 0; col < GvApolloEnum.kMaxBlockLength; col++) {
+//                datainput[row][col] = (short)((row + 1) * col);
+//            }
+//        }
+//        GvApolloManager.getInstance().GvProcess(datainput, dataoutput, GvApolloEnum.kMaxBlockLength);
     }
 
     @Nullable
@@ -155,6 +164,11 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
         next();
     }
 
+    @Override
+    public void onCompletion(AudioPlayer ap) {
+        next();
+    }
+
     public OnPlayerEventListener getOnPlayEventListener() {
         return mListener;
     }
@@ -183,17 +197,32 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
     public void play(Music music) {
         mPlayingMusic = music;
         try {
-            mPlayer.reset();
-            mPlayer.setDataSource(music.getPath());
-            mPlayer.prepareAsync();
+            if (isMP) {
+                mPlayer.reset();
+                mPlayer.setDataSource(music.getPath());
+                mPlayer.prepareAsync();
+                mPlayer.setOnPreparedListener(mPreparedListener);
+                mPlayer.setOnBufferingUpdateListener(mBufferingUpdateListener);
+            } else {
+                mAudioPlayer.reset();
+                mAudioPlayer.setDataSource(music.getPath());
+                mAudioPlayer.setOnPreparedListener(mAPrepareListener);
+                mAudioPlayer.prepareAsync();
+            }
+
+            AudioDecoder decoder = new AudioDecoder();
+            decoder.setDataSource(music.getPath());
+            decoder.initDecoder();
+
+
             mPlayState = STATE_PREPARING;
-            mPlayer.setOnPreparedListener(mPreparedListener);
-            mPlayer.setOnBufferingUpdateListener(mBufferingUpdateListener);
             if (mListener != null) {
                 mListener.onChange(music);
             }
             Notifier.showPlay(music);
         } catch (IOException e) {
+            e.printStackTrace();
+        } catch (IllegalStateException e) {
             e.printStackTrace();
         }
     }
@@ -216,6 +245,15 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
         }
     };
 
+    private AudioPlayer.OnPreparedListener mAPrepareListener = new AudioPlayer.OnPreparedListener() {
+        @Override
+        public void onPrepared(AudioPlayer ap) {
+            if (isPreparing()) {
+                start();
+            }
+        }
+    };
+
     public void playPause() {
         if (isPreparing()) {
             stop();
@@ -229,15 +267,24 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
     }
 
     private boolean start() {
-        mPlayer.start();
-        if (mPlayer.isPlaying()) {
+        boolean isPlaying;
+        if (isMP) {
+            mPlayer.start();
+            isPlaying =  mPlayer.isPlaying();
+        } else {
+            mAudioPlayer.start();
+            isPlaying = mAudioPlayer.isPlaying();
+        }
+
+        if (isPlaying) {
             mPlayState = STATE_PLAYING;
             mHandler.post(mPublishRunnable);
             Notifier.showPlay(mPlayingMusic);
             mAudioManager.requestAudioFocus(this, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
             registerReceiver(mNoisyReceiver, mNoisyFilter);
         }
-        return mPlayer.isPlaying();
+
+        return isPlaying;
     }
 
     private void pause() {
@@ -245,7 +292,12 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
             return;
         }
 
-        mPlayer.pause();
+        if (isMP) {
+            mPlayer.pause();
+        } else {
+            mAudioPlayer.pause();
+        }
+
         mPlayState = STATE_PAUSE;
         mHandler.removeCallbacks(mPublishRunnable);
         Notifier.showPause(mPlayingMusic);
@@ -262,7 +314,11 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
         }
 
         pause();
-        mPlayer.reset();
+        if (isMP) {
+            mPlayer.reset();
+        } else {
+            mAudioPlayer.reset();
+        }
         mPlayState = STATE_IDLE;
     }
 
@@ -327,7 +383,12 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
      */
     public void seekTo(int msec) {
         if (isPlaying() || isPausing()) {
-            mPlayer.seekTo(msec);
+            if (isMP) {
+                mPlayer.seekTo(msec);
+            } else {
+                mAudioPlayer.seekTo(msec);
+            }
+
             if (mListener != null) {
                 mListener.onPublish(msec);
             }
@@ -348,6 +409,10 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
 
     public boolean isIdle() {
         return mPlayState == STATE_IDLE;
+    }
+
+    public static boolean isMP() {
+        return isMP;
     }
 
     /**
@@ -388,7 +453,11 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
         @Override
         public void run() {
             if (isPlaying() && mListener != null) {
-                mListener.onPublish(mPlayer.getCurrentPosition());
+                if (isMP) {
+                    mListener.onPublish(mPlayer.getCurrentPosition());
+                } else {
+                    mListener.onPublish(mAudioPlayer.getCurrentPosition());
+                }
             }
             mHandler.postDelayed(this, TIME_UPDATE);
         }
@@ -452,6 +521,8 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
         mPlayer.reset();
         mPlayer.release();
         mPlayer = null;
+        mAudioPlayer.release();
+        mAudioPlayer = null;
         Notifier.cancelAll();
         AppCache.setPlayService(null);
         stopSelf();
