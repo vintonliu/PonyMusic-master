@@ -18,12 +18,16 @@ import java.nio.ByteBuffer;
 
 public class AudioDecoder {
     private final static String TAG = "AudioDecoder";
+    private static final int STATE_IDLE = 0;
+    private static final int STATE_PREPARING = 1;
+    private static final int STATE_PLAYING = 2;
+    private static final int STATE_PAUSE = 3;
 
     private MediaExtractor mExtractor;
     private MediaCodec mDecoder;
     private int mSampleRate;
     private int mChannels;
-    private int mDuration;
+    private long mDurationMs;
     private String codecMime;
     private MediaCodec.BufferInfo decoderInfo;
     private ByteBuffer[] decodeInputBuffers;
@@ -32,12 +36,16 @@ public class AudioDecoder {
     private AudioDecodeThread mDecodeThread;
 
     private static String mAudioPath;
-    private boolean isPause = false;
-    private boolean isPlaying = false;
+    private long mDecodeSize;
+
+    private int mCurrentPositionMs;
+    private int mPlayState = STATE_IDLE;
 
     class AudioDecodeThread extends Thread{
         private static final int TIMEOUT_US = 1000;
         private volatile boolean keepAlive = true;
+        private AudioDecoder mAudioDecoder;
+
         public AudioDecodeThread(String name) {
             super(name);
         }
@@ -45,11 +53,17 @@ public class AudioDecoder {
         @Override
         public void run() {
             while (keepAlive) {
-                if (isPause) {
+                if (isPausing()) {
+//                    Log.i(TAG, "AudioDecodeThread run pause");
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                     continue;
                 }
 
-                int inIndex = mDecoder.dequeueInputBuffer(TIMEOUT_US);
+                int inIndex = mDecoder.dequeueInputBuffer(-1); //获取可用的inputBuffer -1代表一直等待，0表示不等待 建议-1,避免丢帧
                 if (inIndex >= 0) {
                     ByteBuffer buffer = decodeInputBuffers[inIndex];
                     //从MediaExtractor中读取一帧待解数据
@@ -65,6 +79,7 @@ public class AudioDecoder {
                         //向MediaDecoder输入一帧待解码数据
                         mDecoder.queueInputBuffer(inIndex, 0, sampleSize, mExtractor.getSampleTime(), 0);
                         mExtractor.advance();
+                        mDecodeSize += sampleSize;
                     }
 
                     //从MediaDecoder队列取出一帧解码后的数据
@@ -87,10 +102,9 @@ public class AudioDecoder {
 
                         default:
                             ByteBuffer outBuffer = decodeOutputBuffers[outIndex];
-                            //Log.v(TAG, "outBuffer: " + outBuffer);
 
-                            // AudioTrack write data
-//                            audioTrack.write(chunk, decoderInfo.offset, decoderInfo.offset + decoderInfo.size);
+//                            Log.i(TAG, "decoderInfo.offset = " + decoderInfo.offset + " decoderInfo.size = " + decoderInfo.size);
+                            setCurrentPositionMs((int)(decoderInfo.presentationTimeUs / 1000));
                             if (mOnDecodeCallback != null) {
                                 mOnDecodeCallback.onDecode(outBuffer, decoderInfo.offset, decoderInfo.offset + decoderInfo.size);
                             }
@@ -108,8 +122,6 @@ public class AudioDecoder {
                 }
             }
 
-            isPlaying = false;
-
             //释放MediaDecoder资源
             mDecoder.stop();
             mDecoder.release();
@@ -118,6 +130,10 @@ public class AudioDecoder {
             //释放MediaExtractor资源
             mExtractor.release();
             mExtractor = null;
+
+            if (mOnCompletionListener != null) {
+                mOnCompletionListener.onCompletion(mAudioDecoder);
+            }
         }
 
         public void joinThread() {
@@ -133,7 +149,7 @@ public class AudioDecoder {
     }
 
     public AudioDecoder() {
-        mDecodeThread = new AudioDecodeThread("AudioDecoderThread");
+
     }
 
     public void setDataSource(String audioPath) {
@@ -152,15 +168,14 @@ public class AudioDecoder {
                 if (codecMime.startsWith("audio")) {
                     mSampleRate = mediaFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE);
                     mChannels = mediaFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT);
-                    mDuration = mediaFormat.getInteger(MediaFormat.KEY_DURATION);
-                    Log.i(TAG, "duration = " + mDuration);
+                    mDurationMs = mediaFormat.getLong(MediaFormat.KEY_DURATION) / 1000;
+                    Log.i(TAG, "duration = " + mDurationMs);
 
                     mExtractor.selectTrack(i);
                     mDecoder = MediaCodec.createDecoderByType(codecMime);
                     mDecoder.configure(mediaFormat, null, null, 0);
                     break;
                 }
-
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -176,22 +191,37 @@ public class AudioDecoder {
         decodeOutputBuffers = mDecoder.getOutputBuffers();
         decoderInfo = new MediaCodec.BufferInfo();
 
+        mPlayState = STATE_PREPARING;
         return true;
     }
 
     public void start() {
-        isPause = false;
+        Log.i(TAG, "start()");
+
+        if (isPreparing()) {
+            mDecodeThread = new AudioDecodeThread("AudioDecoderThread");
+            mDecodeThread.start();
+        }
+
+        mPlayState = STATE_PLAYING;
     }
 
     public void pause() {
-        isPause = true;
+        Log.i(TAG, "pause()");
+        mPlayState = STATE_PAUSE;
     }
 
     public void stop() {
-        isPause = true;
+        Log.i(TAG, "stop()");
+        mPlayState = STATE_IDLE;
+        if (mDecodeThread != null) {
+            mDecodeThread.joinThread();
+            mDecodeThread = null;
+        }
     }
 
     public void release() {
+        Log.i(TAG, "release()");
         if (mDecodeThread != null) {
             mDecodeThread.joinThread();
             mDecodeThread = null;
@@ -211,6 +241,8 @@ public class AudioDecoder {
         if (mOnDecodeCallback != null) {
             mOnDecodeCallback = null;
         }
+
+        mPlayState = STATE_IDLE;
     }
 
     public int getChannels() {
@@ -219,6 +251,31 @@ public class AudioDecoder {
 
     public int getSampleRate() {
         return mSampleRate;
+    }
+
+    public boolean isPlaying() {
+        return mPlayState == STATE_PLAYING;
+    }
+
+    public boolean isPausing() {
+        return mPlayState == STATE_PAUSE;
+    }
+
+    public boolean isPreparing() {
+        return mPlayState == STATE_PREPARING;
+    }
+
+    public int getCurrentPositionMs() {
+        synchronized (AudioDecoder.class) {
+//            Log.i(TAG, "getCurrentPositionMs() mCurrentPositionMs = " + mCurrentPositionMs);
+            return mCurrentPositionMs;
+        }
+    }
+
+    public void setCurrentPositionMs(int mCurrentPositionMs) {
+        synchronized (AudioDecoder.class) {
+            this.mCurrentPositionMs = mCurrentPositionMs;
+        }
     }
 
     public void seekTo(int msec) {
@@ -239,10 +296,29 @@ public class AudioDecoder {
      *
      * @param callback the callback that will be run
      */
-    public void setOnDecodeCallback(AudioDecoder.OnDecodeCallback callback)
-    {
+    public void setOnDecodeCallback(AudioDecoder.OnDecodeCallback callback) {
         mOnDecodeCallback = callback;
     }
 
     private OnDecodeCallback mOnDecodeCallback;
+
+    public interface OnCompletionListener {
+        /**
+         * Called when the end of a media source is reached during playback.
+         *
+         */
+        void onCompletion(AudioDecoder ap);
+    }
+
+    /**
+     * Register a callback to be invoked when the end of a media source
+     * has been reached during playback.
+     *
+     * @param listener the callback that will be run
+     */
+    public void setOnCompletionListener(AudioDecoder.OnCompletionListener listener) {
+        mOnCompletionListener = listener;
+    }
+
+    private OnCompletionListener mOnCompletionListener;
 }

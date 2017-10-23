@@ -1,9 +1,11 @@
 package me.wcy.music.gvMedia;
 
+import android.content.Context;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
-import android.os.Process;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 
 import com.gvmedia.apollo.GvApolloAudioConfig;
@@ -18,95 +20,24 @@ import java.nio.ByteBuffer;
  * Created by vinton on 2017/10/20,0020.
  */
 
-public class AudioPlayer implements AudioDecoder.OnDecodeCallback{
+public class AudioPlayer implements AudioDecoder.OnDecodeCallback, AudioDecoder.OnCompletionListener{
     private final static String TAG = "AudioPlayer";
-    private static int channels = 1;
-    private final static int bitsPerSample = 16;
-    private static int bytesPerSample = channels * (bitsPerSample / 8);
-    /* per 10 ms callback, 1000 / 10 */
-    private final static int buffersPerSecond = 100;
+
+    private static final int ON_PREPARING_MSG = 1;
+    private static final int ON_COMPLETION_MSG = 2;
+
+    private static int channels = 2;
     private int sampleRate = 16000;
-    private int maxBytesPerBuffer = bytesPerSample * 480;
-    private int samplesPerBuffer = sampleRate / buffersPerSecond;
 
     private AudioTrack mAudioTrack = null;
-    private ByteBuffer playBuffer = null;
     private AudioDecoder mAudioDecoder = null;
-    private int playSizePerBuffer = 0;
-//    private AudioTrackThread audioThread = null;
-    private String mAudioPath = null;
-    private boolean isPause = false;
-    private boolean isPlaying = false;
-
-    private class AudioTrackThread extends Thread {
-        private volatile boolean keepAlive = true;
-        private byte[] tmpBufPlay = null;
-
-        public AudioTrackThread(String name) {
-            super(name);
-            tmpBufPlay = new byte[maxBytesPerBuffer];
-        }
-
-        @Override
-        public void run() {
-            Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO);
-
-            try {
-                mAudioTrack.play();
-            } catch (IllegalStateException e) {
-                e.printStackTrace();
-            }
-
-            int bytesWritten;
-            while(keepAlive){
-                if (isPause()) {
-                    continue;
-                }
-
-                if (playBuffer.remaining() < playSizePerBuffer) {
-                    continue;
-                }
-                playBuffer.get(tmpBufPlay);
-                bytesWritten = mAudioTrack.write(tmpBufPlay, 0, playSizePerBuffer);
-                if (bytesWritten != playSizePerBuffer) {
-                    Log.e(TAG, "AudioTrack write failed.");
-                }
-                playBuffer.rewind();
-            }
-
-            try {
-                mAudioTrack.stop();
-                mAudioTrack.flush();
-            } catch (IllegalStateException e) {
-                e.printStackTrace();
-            }
-        }
-
-        public void joinThread() {
-            keepAlive = false;
-            while (isAlive()) {
-                try {
-                    join(20);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
 
     public AudioPlayer() {
         mAudioDecoder = new AudioDecoder();
         mAudioDecoder.setOnDecodeCallback(this);
+        mAudioDecoder.setOnCompletionListener(this);
 
         GvApolloManager.getInstance().GvInit();
-    }
-
-    @Override
-    public void onDecode(ByteBuffer buffer, int offset, int length) {
-        byte[] tmpBuf = new byte[length];
-        buffer.get(tmpBuf);
-//        GvApolloManager.getInstance().GvProcess();
-        mAudioTrack.write(tmpBuf, 0, length);
     }
 
     public void setDataSource(String audioPath) throws IOException {
@@ -115,12 +46,11 @@ public class AudioPlayer implements AudioDecoder.OnDecodeCallback{
             throw new IOException("setDataSource failed.");
         }
 
-        mAudioPath = audioPath;
         mAudioDecoder.setDataSource(audioPath);
     }
 
     public void prepareAsync() throws IllegalStateException {
-//        audioThread = new AudioTrackThread("AudioPlayerThread");
+        Log.i(TAG, "prepareAsync()");
         if (!mAudioDecoder.initDecoder()) {
             throw new IllegalStateException("audio decoder init failed.");
         }
@@ -133,9 +63,12 @@ public class AudioPlayer implements AudioDecoder.OnDecodeCallback{
                 new GvApolloAudioConfig(mAudioDecoder.getSampleRate(),
                                         mAudioDecoder.getChannels());
         GvApolloManager.getInstance().GvSetSetting(GvApolloEnum.SETTING_AUDIO_ID, audioConfig);
+
+        mHandler.sendEmptyMessageDelayed(ON_PREPARING_MSG, 100);
     }
 
     private boolean initPlayout() {
+        Log.i(TAG, "initPlayout()");
         sampleRate = mAudioDecoder.getSampleRate();
         channels = mAudioDecoder.getChannels();
         int channelConfig = channels == 1 ? AudioFormat.CHANNEL_OUT_MONO : AudioFormat.CHANNEL_OUT_STEREO;
@@ -148,7 +81,7 @@ public class AudioPlayer implements AudioDecoder.OnDecodeCallback{
         }
 
         try {
-            mAudioTrack = new AudioTrack(AudioManager.STREAM_VOICE_CALL,
+            mAudioTrack = new AudioTrack(AudioManager.STREAM_MUSIC,
                     sampleRate,
                     channelConfig,
                     AudioFormat.ENCODING_PCM_16BIT,
@@ -172,18 +105,30 @@ public class AudioPlayer implements AudioDecoder.OnDecodeCallback{
     }
 
     public void start() {
-        isPause = false;
-        mAudioTrack.play();
-//        audioThread.start();
+        Log.i(TAG, "start()");
+        if (mAudioTrack.getPlayState() != AudioTrack.PLAYSTATE_PLAYING) {
+            mAudioTrack.play();
+        }
+
+        mAudioDecoder.start();
     }
 
     public void pause() {
-        isPause = true;
+        Log.i(TAG, "pause()");
         mAudioTrack.pause();
+        mAudioDecoder.pause();
     }
 
     public void stop() {
-        mAudioTrack.stop();
+        Log.i(TAG, "stop()");
+        if (mAudioDecoder != null) {
+            mAudioDecoder.stop();
+        }
+
+        if (mAudioTrack != null) {
+            mAudioTrack.stop();
+            mAudioTrack = null;
+        }
     }
 
     public void seekTo(int msec) throws IllegalStateException {
@@ -191,14 +136,20 @@ public class AudioPlayer implements AudioDecoder.OnDecodeCallback{
     }
 
     public int getCurrentPosition() {
-        return 0;
+        return mAudioDecoder.getCurrentPositionMs();
     }
 
     public void reset() {
-//        if (audioThread != null) {
-//            audioThread.joinThread();
-//            audioThread = null;
-//        }
+        Log.i(TAG, "reset()");
+
+        if (mAudioDecoder != null) {
+            mAudioDecoder.stop();
+        }
+
+        if (mAudioTrack != null) {
+            mAudioTrack.stop();
+            mAudioTrack = null;
+        }
     }
 
     public void release() {
@@ -218,12 +169,47 @@ public class AudioPlayer implements AudioDecoder.OnDecodeCallback{
         GvApolloManager.getInstance().GvClose();
     }
 
-    public boolean isPause() {
-        return isPause;
+    public boolean isPlaying() {
+        return mAudioDecoder.isPlaying();
     }
 
-    public boolean isPlaying() {
-        return isPlaying;
+    public boolean isPausing() {
+        return mAudioDecoder.isPausing();
+    }
+
+    public boolean isPreparing() {
+        return mAudioDecoder.isPreparing();
+    }
+
+    private Handler mHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+            if (msg.what == ON_PREPARING_MSG) {
+                if (mOnPreparedListener != null) {
+                    mOnPreparedListener.onPrepared();
+                }
+            } else if (msg.what == ON_COMPLETION_MSG) {
+                if (mOnCompletionListener != null) {
+                    mOnCompletionListener.onCompletion();
+                }
+            }
+        }
+    };
+
+    @Override
+    public void onDecode(ByteBuffer buffer, int offset, int length) {
+        byte[] tmpBuf = new byte[length];
+        buffer.get(tmpBuf);
+//        GvApolloManager.getInstance().GvProcess();
+        if (mAudioTrack != null) {
+            mAudioTrack.write(tmpBuf, 0, length);
+        }
+    }
+
+    @Override
+    public void onCompletion(AudioDecoder ap) {
+        mHandler.sendEmptyMessageDelayed(ON_COMPLETION_MSG, 100);
     }
 
     public interface OnCompletionListener {
@@ -231,7 +217,7 @@ public class AudioPlayer implements AudioDecoder.OnDecodeCallback{
          * Called when the end of a media source is reached during playback.
          *
          */
-        void onCompletion(AudioPlayer ap);
+        void onCompletion();
     }
 
     /**
@@ -240,8 +226,7 @@ public class AudioPlayer implements AudioDecoder.OnDecodeCallback{
      *
      * @param listener the callback that will be run
      */
-    public void setOnCompletionListener(AudioPlayer.OnCompletionListener listener)
-    {
+    public void setOnCompletionListener(AudioPlayer.OnCompletionListener listener) {
         mOnCompletionListener = listener;
     }
 
@@ -251,14 +236,12 @@ public class AudioPlayer implements AudioDecoder.OnDecodeCallback{
      * Interface definition for a callback to be invoked when the media
      * source is ready for playback.
      */
-    public interface OnPreparedListener
-    {
+    public interface OnPreparedListener {
         /**
          * Called when the media file is ready for playback.
          *
-         * @param ap the MediaPlayer that is ready for playback
          */
-        void onPrepared(AudioPlayer ap);
+        void onPrepared();
     }
 
     /**
@@ -267,8 +250,7 @@ public class AudioPlayer implements AudioDecoder.OnDecodeCallback{
      *
      * @param listener the callback that will be run
      */
-    public void setOnPreparedListener(AudioPlayer.OnPreparedListener listener)
-    {
+    public void setOnPreparedListener(AudioPlayer.OnPreparedListener listener) {
         mOnPreparedListener = listener;
     }
 

@@ -65,7 +65,7 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
     private int mPlayState = STATE_IDLE;
 
     private AudioPlayer mAudioPlayer = new AudioPlayer();
-    private static boolean isMP = true;
+    private static boolean isMP = false;
 
     @Override
     public void onCreate() {
@@ -165,7 +165,7 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
     }
 
     @Override
-    public void onCompletion(AudioPlayer ap) {
+    public void onCompletion() {
         next();
     }
 
@@ -178,6 +178,7 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
     }
 
     public void play(int position) {
+        Log.i(TAG, "play() position = " + position);
         if (mMusicList.isEmpty()) {
             return;
         }
@@ -195,8 +196,11 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
     }
 
     public void play(Music music) {
+        Log.i(TAG, "play(music)");
         mPlayingMusic = music;
         try {
+            mPlayState = STATE_PREPARING;
+
             if (isMP) {
                 mPlayer.reset();
                 mPlayer.setDataSource(music.getPath());
@@ -210,12 +214,8 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
                 mAudioPlayer.prepareAsync();
             }
 
-            AudioDecoder decoder = new AudioDecoder();
-            decoder.setDataSource(music.getPath());
-            decoder.initDecoder();
+//            Log.i(TAG, "music duration = " + music.getDuration());
 
-
-            mPlayState = STATE_PREPARING;
             if (mListener != null) {
                 mListener.onChange(music);
             }
@@ -247,7 +247,8 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
 
     private AudioPlayer.OnPreparedListener mAPrepareListener = new AudioPlayer.OnPreparedListener() {
         @Override
-        public void onPrepared(AudioPlayer ap) {
+        public void onPrepared() {
+            Log.i(TAG, "AudioPlayer.OnPreparedListener");
             if (isPreparing()) {
                 start();
             }
@@ -255,6 +256,7 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
     };
 
     public void playPause() {
+        Log.i(TAG, "playPause()");
         if (isPreparing()) {
             stop();
         } else if (isPlaying()) {
@@ -268,6 +270,7 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
 
     private boolean start() {
         boolean isPlaying;
+        Log.i(TAG, "start()");
         if (isMP) {
             mPlayer.start();
             isPlaying =  mPlayer.isPlaying();
@@ -288,6 +291,7 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
     }
 
     private void pause() {
+        Log.i(TAG, "pause()");
         if (!isPlaying()) {
             return;
         }
@@ -323,6 +327,7 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
     }
 
     private void resume() {
+        Log.i(TAG, "resume()");
         if (!isPausing()) {
             return;
         }
