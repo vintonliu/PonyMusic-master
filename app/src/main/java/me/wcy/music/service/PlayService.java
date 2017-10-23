@@ -143,6 +143,7 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
 
     @Override
     public void onCompletion() {
+        Log.i(TAG, "AudioPlayer onCompletion()");
         next();
     }
 
@@ -173,18 +174,28 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
     }
 
     public void play(Music music) {
-        Log.i(TAG, "play(music)");
+        Log.i(TAG, "play(music) path = " + music.getPath());
         mPlayingMusic = music;
+        if (music.getType() == Music.Type.ONLINE) {
+            isMP = true;
+        } else {
+            isMP = false;
+        }
+
         try {
             mPlayState = STATE_PREPARING;
 
             if (isMP) {
+                mAudioPlayer.reset();
+
                 mPlayer.reset();
                 mPlayer.setDataSource(music.getPath());
                 mPlayer.prepareAsync();
                 mPlayer.setOnPreparedListener(mPreparedListener);
                 mPlayer.setOnBufferingUpdateListener(mBufferingUpdateListener);
             } else {
+                mPlayer.reset();
+
                 mAudioPlayer.reset();
                 mAudioPlayer.setDataSource(music.getPath());
                 mAudioPlayer.setOnPreparedListener(mAPrepareListener);

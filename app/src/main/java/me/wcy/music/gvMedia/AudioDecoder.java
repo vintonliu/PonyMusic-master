@@ -128,7 +128,7 @@ public class AudioDecoder {
             mExtractor.release();
             mExtractor = null;
 
-            if (mOnCompletionListener != null) {
+            if (mOnCompletionListener != null && isPlaying()) {
                 mOnCompletionListener.onCompletion(mAudioDecoder);
             }
         }
