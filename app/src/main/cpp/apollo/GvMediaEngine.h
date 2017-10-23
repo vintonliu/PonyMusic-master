@@ -8,22 +8,28 @@
 #include "apollo_api.h"
 #include "apollo.h"
 
-#define MAX_INPUT_CHANNELS_NUM      kSrs2_0 // kSrs6_1
-#define MAX_OUTPUT_CHANNELS_NUM     kSrs2_0
-
 enum GvSettingId
 {
-    SETTING_CHANNEL_ID =1,
-    SETTING_STATE_ID = 2,
-    SETTING_AUDIO_ID = 3,
-    SETTING_SOUND_EFFECT_ID = 4
+    SETTING_AUDIO_FORMAT_ID = 1,
+    SETTING_SOUND_EFFECT_ID = 2
 };
 
-typedef struct tAudioConfig
+enum GvSoundEffectId
+{
+    GV_SOUND_EFFECT_NOTHING = 0,
+    GV_SOUND_EFFECT_CLASSIC = 6,
+};
+
+typedef struct tAudioFormatConfig
 {
     int sampleRate;
     int channels;
-} GvAudioConfig;
+} GvAudioFormatConfig;
+
+typedef struct tSoundEffectConfig
+{
+    int id;
+}GvSoundEffectConfig;
 
 class GvMediaEngine {
 public:
@@ -54,18 +60,21 @@ public:
      * @brief process audio data in pcm format
      * @param dataInput input data will be process
      * @param dataOutput output data have been processed
-     * @param nSize input data size
+     * @param sizeInBytes input data size
      * @return 0 for successed, else failure
      */
-    int process(short dataInput[MAX_INPUT_CHANNELS_NUM][kMaxBlockLength],
-                short dataOutput[MAX_OUTPUT_CHANNELS_NUM][kMaxBlockLength],
-                int nSize);
+    int processData(char *dataInput,
+                    char *dataOutput,
+                    int sizeInBytes);
 
 private:
     GVApolloChannel* _channelCfg;
     GVApolloState* _stateCfg;
 
-    GvAudioConfig _audioConfig;
+    GvAudioFormatConfig _audioConfig;
+
+    int _effectId;
+    GvSoundEffectConfig _effectConfig;
 
     Sample*	_tempSample;
 };

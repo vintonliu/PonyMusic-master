@@ -1,6 +1,5 @@
 package me.wcy.music.gvMedia;
 
-import android.content.Context;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
@@ -8,9 +7,10 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 
-import com.gvmedia.apollo.GvApolloAudioConfig;
+import com.gvmedia.apollo.GvAudioFormatConfig;
 import com.gvmedia.apollo.GvApolloEnum;
 import com.gvmedia.apollo.GvApolloManager;
+import com.gvmedia.apollo.GvSoundEffectConfig;
 
 import java.io.File;
 import java.io.IOException;
@@ -59,10 +59,10 @@ public class AudioPlayer implements AudioDecoder.OnDecodeCallback, AudioDecoder.
             throw new IllegalStateException("audio player init failed");
         }
 
-        GvApolloAudioConfig audioConfig =
-                new GvApolloAudioConfig(mAudioDecoder.getSampleRate(),
+        GvAudioFormatConfig audioConfig =
+                new GvAudioFormatConfig(mAudioDecoder.getSampleRate(),
                                         mAudioDecoder.getChannels());
-        GvApolloManager.getInstance().GvSetSetting(GvApolloEnum.SETTING_AUDIO_ID, audioConfig);
+        GvApolloManager.getInstance().GvSetSetting(GvApolloEnum.SETTING_AUDIO_FORMAT_ID, audioConfig);
 
         mHandler.sendEmptyMessageDelayed(ON_PREPARING_MSG, 100);
     }
@@ -181,6 +181,11 @@ public class AudioPlayer implements AudioDecoder.OnDecodeCallback, AudioDecoder.
         return mAudioDecoder.isPreparing();
     }
 
+    public void updateSoundEffect(int effectId) {
+        GvApolloManager.getInstance().GvSetSetting(GvApolloEnum.SETTING_SOUND_EFFECT_ID,
+                new GvSoundEffectConfig(effectId));
+    }
+
     private Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
@@ -200,10 +205,13 @@ public class AudioPlayer implements AudioDecoder.OnDecodeCallback, AudioDecoder.
     @Override
     public void onDecode(ByteBuffer buffer, int offset, int length) {
         byte[] tmpBuf = new byte[length];
-        buffer.get(tmpBuf);
-//        GvApolloManager.getInstance().GvProcess();
-        if (mAudioTrack != null) {
-            mAudioTrack.write(tmpBuf, 0, length);
+        int res = GvApolloManager.getInstance().GvProcess(buffer, tmpBuf, length);
+        if (res == 0) {
+            if (mAudioTrack != null) {
+                mAudioTrack.write(tmpBuf, 0, length);
+            }
+        } else {
+            Log.e(TAG, "onDecode() GvProcess failed. res = " + res);
         }
     }
 

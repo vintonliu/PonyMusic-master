@@ -1,6 +1,6 @@
 package com.gvmedia.apollo;
 
-import static com.gvmedia.apollo.GvApolloEnum.kSrs6_1;
+import java.nio.ByteBuffer;
 
 /**
  * Created by vinton on 2017/10/18,0018.
@@ -11,6 +11,8 @@ public final class GvApolloManager {
     static {
         System.loadLibrary("apollo");
     }
+
+    private static final String TAG = "GvApolloManager";
 
     private static final GvApolloManager ourInstance = new GvApolloManager();
 
@@ -24,15 +26,19 @@ public final class GvApolloManager {
 
     private native final int apolloInit(long handle);
 
-    private native final int apolloProcess(long handle,
-                                           short[][] dataInput,
-                                           short[][] dataOutput,
-                                           int nSize);
+    private native final int apolloProcess(long handle, int nSize);
 
     private native final int getMaxBlockLen(long handle);
 
+    private native final void cacheInputBufferDirectAddress(ByteBuffer byteBuffer);
+
+    private native final void cacheOutputBufferDirectBuffer(ByteBuffer byteBuffer);
+
     /** GvMediaEngine instance handle **/
     long handle = 0;
+
+    ByteBuffer inputBuffer;
+    ByteBuffer outputBuffer;
 
     /**
      * get singleton instance
@@ -44,13 +50,22 @@ public final class GvApolloManager {
 
     private GvApolloManager() {
         handle = newInstance();
+
+        // 500k bytes
+        inputBuffer = ByteBuffer.allocateDirect(500 * 1024);
+        outputBuffer = ByteBuffer.allocateDirect(500 * 1024);
+
+        cacheInputBufferDirectAddress(inputBuffer);
+        cacheOutputBufferDirectBuffer(outputBuffer);
     }
 
     /**
      * free gvmedia instance memory
      */
     public void GvClose() {
-        deleteInstance(handle);
+        if (handle != 0) {
+            deleteInstance(handle);
+        }
     }
 
     /**
@@ -80,16 +95,25 @@ public final class GvApolloManager {
     }
 
     /**
-     * process audio data in pcm format
-     * @param dataInput input data will be process
+     * processData audio data in pcm format
+     * @param dataInput input data will be processData
      * @param dataOutput output data have been processed
-     * @param nSize input data size
+     * @param length input data size
      * @return 0 for successed, else failure
      */
-    public int GvProcess(short[][] dataInput,
-                         short[][] dataOutput,
-                         int nSize) {
-        return apolloProcess(handle, dataInput, dataOutput, nSize);
+    public int GvProcess(ByteBuffer dataInput,
+                         byte[] dataOutput,
+                         int length) {
+        inputBuffer.rewind();
+        inputBuffer.put(dataInput);
+        int res = apolloProcess(handle, length);
+        if (res != 0) {
+            return res;
+        }
+
+        outputBuffer.get(dataOutput, 0, length);
+        outputBuffer.rewind();
+        return res;
     }
 
     public int GvGetMaxBlockLength() {

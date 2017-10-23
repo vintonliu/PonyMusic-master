@@ -5,10 +5,6 @@ import android.media.MediaExtractor;
 import android.media.MediaFormat;
 import android.util.Log;
 
-import com.gvmedia.apollo.GvApolloAudioConfig;
-import com.gvmedia.apollo.GvApolloEnum;
-import com.gvmedia.apollo.GvApolloManager;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -66,6 +62,8 @@ public class AudioDecoder {
                 int inIndex = mDecoder.dequeueInputBuffer(-1); //获取可用的inputBuffer -1代表一直等待，0表示不等待 建议-1,避免丢帧
                 if (inIndex >= 0) {
                     ByteBuffer buffer = decodeInputBuffers[inIndex];
+                    buffer.clear();
+
                     //从MediaExtractor中读取一帧待解数据
                     int sampleSize = mExtractor.readSampleData(buffer, 0);
                     if (sampleSize < 0) {
@@ -74,7 +72,6 @@ public class AudioDecoder {
                         // dequeueOutputBuffer
                         Log.d(TAG, "InputBuffer BUFFER_FLAG_END_OF_STREAM");
                         mDecoder.queueInputBuffer(inIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
-
                     } else {
                         //向MediaDecoder输入一帧待解码数据
                         mDecoder.queueInputBuffer(inIndex, 0, sampleSize, mExtractor.getSampleTime(), 0);
@@ -103,7 +100,7 @@ public class AudioDecoder {
                         default:
                             ByteBuffer outBuffer = decodeOutputBuffers[outIndex];
 
-//                            Log.i(TAG, "decoderInfo.offset = " + decoderInfo.offset + " decoderInfo.size = " + decoderInfo.size);
+//                            Log.i(TAG, "decoderInfo.size = " + decoderInfo.size);
                             setCurrentPositionMs((int)(decoderInfo.presentationTimeUs / 1000));
                             if (mOnDecodeCallback != null) {
                                 mOnDecodeCallback.onDecode(outBuffer, decoderInfo.offset, decoderInfo.offset + decoderInfo.size);

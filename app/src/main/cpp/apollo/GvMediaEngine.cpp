@@ -16,8 +16,11 @@ GvMediaEngine::GvMediaEngine()
     LOGI("%s ctor", __func__);
     _channelCfg = new GVApolloChannel();
     _stateCfg = new GVApolloState();
+
     _audioConfig.sampleRate = 48000;
     _audioConfig.channels = 2;
+
+    _effectConfig.id = 0;
 
     _tempSample = new Sample[kSrsApolloTempBuffers * kMaxBlockLength];
 }
@@ -49,9 +52,9 @@ void GvMediaEngine::setSetting(int settingId, void *cfgObj)
     LOGI("%s settingId %d", __func__, settingId);
     switch (settingId)
     {
-        case SETTING_AUDIO_ID:
+        case SETTING_AUDIO_FORMAT_ID:
         {
-            GvAudioConfig* config = (GvAudioConfig*)cfgObj;
+            GvAudioFormatConfig* config = (GvAudioFormatConfig*)cfgObj;
             _audioConfig.sampleRate = config->sampleRate;
             _audioConfig.channels = config->channels;
             LOGI("%s sampleRate[%d] channels[%d]", __FUNCTION__,
@@ -59,6 +62,17 @@ void GvMediaEngine::setSetting(int settingId, void *cfgObj)
                 _audioConfig.channels);
         }
         break;
+
+        case SETTING_SOUND_EFFECT_ID:
+        {
+            _effectId = *(int*)cfgObj;
+            GvSoundEffectConfig* config = (GvSoundEffectConfig*)cfgObj;
+            _effectConfig.id = config->id;
+        }
+        break;
+
+        default:
+            break;
     }
 }
 
@@ -67,13 +81,21 @@ void GvMediaEngine::getSetting(int settingId, void *cfgObj)
     LOGI("%s settingId %d", __func__, settingId);
     switch (settingId)
     {
-        case SETTING_AUDIO_ID:
+        case SETTING_AUDIO_FORMAT_ID:
         {
-            _audioConfig.sampleRate = 44100;
-            _audioConfig.channels = 1;
-            memcpy((GvAudioConfig*)cfgObj, &_audioConfig, sizeof(GvAudioConfig));
+            memcpy((GvAudioFormatConfig*)cfgObj, &_audioConfig, sizeof(GvAudioFormatConfig));
         }
         break;
+
+        case SETTING_SOUND_EFFECT_ID:
+        {
+            cfgObj = (void*)&_effectId;
+            memcpy((GvSoundEffectConfig*)cfgObj, &_effectConfig, sizeof(GvSoundEffectConfig));
+        }
+        break;
+
+        default:
+            break;
     }
 }
 
@@ -85,16 +107,13 @@ int GvMediaEngine::initEngine()
     return 0;
 }
 
-int GvMediaEngine::process(short dataInput[MAX_INPUT_CHANNELS_NUM][kMaxBlockLength],
-                           short dataOutput[MAX_OUTPUT_CHANNELS_NUM][kMaxBlockLength],
-                           int nSize)
+int GvMediaEngine::processData(char *dataInput,
+                               char *dataOutput,
+                               int sizeInBytes)
 {
-    LOGI("%s", __func__);
-    for (int i = 0; i < MAX_INPUT_CHANNELS_NUM; ++i) {
-        for (int j = 0; j < kMaxBlockLength; ++j) {
-            dataOutput[i][j] = dataInput[i][j];
-        }
-    }
+//    LOGI("%s", __func__);
+
+    memcpy(dataOutput, dataInput, sizeInBytes);
 
     return 0;
 }
